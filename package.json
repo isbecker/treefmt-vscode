@@ -2,7 +2,7 @@
   "name": "treefmt-vscode",
   "displayName": "treefmt-vscode",
   "description": "treefmt streamlines the process of applying formatters to your project, making it a breeze with just one command line.",
-  "version": "2.0.0-rc5",
+  "version": "2.0.0",
   "publisher": "ibecker",
   "engines": {
     "vscode": "^1.90.0"
