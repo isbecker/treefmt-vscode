@@ -1,71 +1,89 @@
 # treefmt-vscode README
 
-This is the README for your extension "treefmt-vscode". After writing up a brief description, we recommend including the following sections.
+`treefmt-vscode` is a VS Code extension that integrates the `treefmt` formatter into your development workflow. `treefmt` is a versatile formatting tool that supports multiple languages and formatters through a single configuration file.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Automatic Formatting**: Automatically format your files on save or through a command.
+- **Supports Multiple Formatters**: Leverage the power of `treefmt` to format JavaScript, TypeScript, Python, Markdown, HTML, CSS, JSON, YAML, and more.
+- **Configuration File**: Uses a `treefmt.toml` file to define your formatting rules.
+- **Bundled or System `treefmt`**: Choose between using the bundled version of `treefmt` or the system-installed version.
+- **Supports Multiple Versions**: Supports both the original Rust version and the new Go-based `treefmt2` version.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Visual Studio Code version 1.60.0 or higher.
+- `treefmt.toml` configuration file in the root of your project.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `treefmt.useVersion`: Choose which version of `treefmt` to use (`treefmt` for the original version or `treefmt2` for the new version).
+
+## Commands
+
+This extension provides the following commands:
+
+- `treefmt-vscode.runTreefmt`: Run `treefmt` on the current file.
+
+## Usage
+
+1. **Install the Extension**: Search for `treefmt-vscode` in the VS Code marketplace and install it.
+1. **Create Configuration**: Create a `treefmt.toml` file in the root of your project and define your formatting rules.
+1. **Run Formatter**: Use the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS) and run `Treefmt: Run Treefmt` or set up auto-format on save.
+
+## Example `treefmt.toml`
+
+```toml
+[formatter.prettier]
+command = "prettier --write"
+options = []
+includes = ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"]
+
+[formatter.black]
+command = "black"
+options = []
+includes = ["**/*.py"]
+
+[formatter.prettier-markdown]
+command = "prettier --write"
+options = []
+includes = ["**/*.md"]
+
+[formatter.prettier-html]
+command = "prettier --write"
+options = []
+includes = ["**/*.html"]
+
+[formatter.prettier-css]
+command = "prettier --write"
+options = []
+includes = ["**/*.css", "**/*.scss", "**/*.sass"]
+
+[formatter.prettier-json]
+command = "prettier --write"
+options = []
+includes = ["**/*.json"]
+
+[formatter.prettier-yaml]
+command = "prettier --write"
+options = []
+includes = ["**/*.yaml", "**/*.yml"]
+```
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Ensure `treefmt.toml` is properly configured in the root of your project.
+- For any issues related to `treefmt` itself, please refer to the [treefmt GitHub repository](https://github.com/numtide/treefmt).
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of ...
+- Initial release of `treefmt-vscode`.
+- Support for both `treefmt` and `treefmt2`.
+- Configuration option to choose which version to use.
+- Automatic formatting and command to run `treefmt`.
 
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy using treefmt-vscode!**
