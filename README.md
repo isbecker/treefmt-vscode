@@ -86,4 +86,8 @@ includes = ["**/*.yaml", "**/*.yml"]
 - Configuration option to choose which version to use.
 - Automatic formatting and command to run `treefmt`.
 
+## License
+
+GPL-3.0
+
 **Enjoy using treefmt-vscode!**
