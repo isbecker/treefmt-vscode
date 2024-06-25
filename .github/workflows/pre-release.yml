@@ -48,10 +48,11 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
       - name: Determine treefmt version and filename
         id: determine-version
+        shell: bash
         run: |
           if [[ "${{ matrix.platform }}" == 'windows' ]]; then
             echo "PRERELEASE=false" >> $GITHUB_ENV
