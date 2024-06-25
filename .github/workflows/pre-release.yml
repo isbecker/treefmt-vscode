@@ -85,6 +85,7 @@ jobs:
           extract: true
 
       - name: Rename treefmt binary
+        shell: bash
         run: |
           mkdir -p bin
           if [[ "${{ matrix.platform }}" == 'windows' ]]; then
