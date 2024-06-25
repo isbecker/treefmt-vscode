@@ -150,7 +150,7 @@ jobs:
           node-version: 20
 
       - name: Publish to Marketplace
-        run: npx vsce publish --packagePath treefmt-*.vsix --pat ${{ secrets.MARKETPLACE_TOKEN }}
+        run: npx vsce publish --packagePath treefmt-*.vsix --pat ${{ secrets.MARKETPLACE_TOKEN }} --pre-release
 
       # - name: Publish to OpenVSX
       #   run: npx ovsx publish --packagePath treefmt-*.vsix --pat ${{ secrets.OPENVSX_TOKEN }}
