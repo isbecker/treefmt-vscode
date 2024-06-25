@@ -4,6 +4,9 @@ on:
     tags:
       - 'v*-rc*' # Matches tags like v2.0.0-rc1, v2.0.0-rc2, etc.
 
+permissions:
+  contents: write
+
 env:
   FETCH_DEPTH: 0 # pull in the tags for the version string
 
