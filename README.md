@@ -5,7 +5,7 @@
 <a href="https://github.com/isbecker/treefmt-vscode/actions/workflows/release.yml">
     <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/isbecker/treefmt-vscode/release.yml"></a>
   <a href="https://github.com/isbecker/treefmt-vscode/releases">
-    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/isbecker/treefmt-vscode">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/isbecker/treefmt-vscode?include_prereleases">
 </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=ibecker.treefmt-vscode">
     <img alt="VS Code Marketplace Downloads" src="https://img.shields.io/visual-studio-marketplace/d/ibecker.treefmt-vscode"></a>
