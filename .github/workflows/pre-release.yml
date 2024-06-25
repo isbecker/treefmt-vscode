@@ -102,7 +102,7 @@ jobs:
         run: npm ci
 
       - name: Package Extension
-        run: npx vsce package -o "./treefmt-${{ matrix.code-target }}.vsix" --target ${{ matrix.code-target }}
+        run: npx vsce package -o "./treefmt-${{ matrix.code-target }}.vsix" --target ${{ matrix.code-target }} --pre-release
 
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
