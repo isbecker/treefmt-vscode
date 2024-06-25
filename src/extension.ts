@@ -1,80 +1,113 @@
-import { exec } from "child_process";
+import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import * as vscode from "vscode";
+import { exec } from "child_process";
 
-export function activate(context: vscode.ExtensionContext) {
-	const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+async function runTreefmt() {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showInformationMessage("No active editor found.");
+		return;
+	}
 
-	if (rootPath) {
-		const treefmtConfigPath = path.join(rootPath, "treefmt.toml");
-		if (!fs.existsSync(treefmtConfigPath)) {
-			vscode.window
-				.showInformationMessage(
-					"No treefmt.toml found. Do you want to create one?",
-					"Yes",
-					"No",
-				)
-				.then((selection) => {
-					if (selection === "Yes") {
-						// Call treefmt --init to create a treefmt.toml file
-						exec("treefmt --init", { cwd: rootPath }, (error) => {
-							if (error) {
-								vscode.window.showErrorMessage("Error running treefmt --init");
-							} else {
-								vscode.window.showInformationMessage("Created treefmt.toml");
-							}
-						});
-					}
-				});
+	const document = editor.document;
+	const filePath = document.fileName;
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+
+	if (!workspaceFolders) {
+		vscode.window.showInformationMessage("No workspace folder found.");
+		return;
+	}
+
+	const workspaceRoot = workspaceFolders[0].uri.fsPath;
+	const treefmtTomlPath = path.join(workspaceRoot, "treefmt.toml");
+	const bundledTreefmtPath = path.join(__dirname, "bin", "treefmt");
+
+	let treefmtCommand = "treefmt";
+	if (fs.existsSync(bundledTreefmtPath)) {
+		treefmtCommand = bundledTreefmtPath;
+	}
+
+	if (!fs.existsSync(treefmtTomlPath)) {
+		const create = await vscode.window.showInformationMessage(
+			"No treefmt.toml found. Would you like to create one?",
+			"Yes",
+			"No",
+		);
+
+		if (create === "Yes") {
+			exec(`${treefmtCommand} --init`, { cwd: workspaceRoot }, (error) => {
+				if (error) {
+					vscode.window.showErrorMessage(
+						`Error running ${treefmtCommand} --init`,
+					);
+				} else {
+					vscode.window.showInformationMessage("Created treefmt.toml");
+				}
+			});
 		} else {
-			vscode.window.showInformationMessage("treefmt.toml found");
+			return;
 		}
 	}
 
-	const runTreefmt = (document: vscode.TextDocument) => {
-		if (rootPath) {
-			return new Promise<vscode.TextEdit[]>((resolve, reject) => {
-				exec("treefmt", { cwd: rootPath }, (error, stdout, stderr) => {
-					if (error) {
-						vscode.window.showErrorMessage(`Error running treefmt: ${stderr}`);
-						reject([]);
-						return;
-					}
-					vscode.window.showInformationMessage(`treefmt output: ${stdout}`);
-					// Since treefmt writes directly to the files, reload the document
-					document.save().then(() => {
-						resolve([]);
-					});
-				});
-			});
+	exec(treefmtCommand, { cwd: workspaceRoot }, (error, stdout, stderr) => {
+		if (error) {
+			vscode.window.showErrorMessage(
+				`Error running ${treefmtCommand}: ${stderr}`,
+			);
+			return;
 		}
-		return Promise.resolve([]);
-	};
+		vscode.window.showInformationMessage("treefmt ran successfully.");
+	});
+}
 
-	let disposable = vscode.commands.registerCommand(
-		"extension.runTreefmt",
-		() => {
-			if (vscode.window.activeTextEditor) {
-				runTreefmt(vscode.window.activeTextEditor.document);
-			}
-		},
+export function activate(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+		vscode.commands.registerCommand("extension.runTreefmt", runTreefmt),
 	);
 
-	context.subscriptions.push(disposable);
-
-	// Register formatting provider for all files
 	vscode.languages.registerDocumentFormattingEditProvider(
-		{ language: "*", scheme: "file" },
+		{ pattern: "**/*" },
 		{
 			provideDocumentFormattingEdits(
 				document: vscode.TextDocument,
-			): Thenable<vscode.TextEdit[]> {
-				return runTreefmt(document);
+			): vscode.TextEdit[] {
+				const workspaceFolders = vscode.workspace.workspaceFolders;
+				if (!workspaceFolders) {
+					return [];
+				}
+
+				const workspaceRoot = workspaceFolders[0].uri.fsPath;
+				const treefmtTomlPath = path.join(workspaceRoot, "treefmt.toml");
+				const bundledTreefmtPath = path.join(__dirname, "bin", "treefmt");
+
+				let treefmtCommand = "treefmt";
+				if (fs.existsSync(bundledTreefmtPath)) {
+					treefmtCommand = bundledTreefmtPath;
+				}
+
+				if (!fs.existsSync(treefmtTomlPath)) {
+					return [];
+				}
+
+				exec(
+					treefmtCommand,
+					{ cwd: workspaceRoot },
+					(error, stdout, stderr) => {
+						if (error) {
+							vscode.window.showErrorMessage(
+								`Error running ${treefmtCommand}: ${stderr}`,
+							);
+							return [];
+						}
+						vscode.window.showInformationMessage("treefmt ran successfully.");
+					},
+				);
+
+				return [];
 			},
 		},
 	);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
