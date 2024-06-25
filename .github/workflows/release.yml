@@ -109,7 +109,7 @@ jobs:
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
         with:
-          name: vsix
+          name: vsix-${{ matrix.platform }}-${{ matrix.arch }}
           path: "./treefmt-${{ matrix.code-target }}.vsix"
 
   create-release:
@@ -120,7 +120,7 @@ jobs:
       - name: Download VSIX
         uses: actions/download-artifact@v4
         with:
-          name: vsix
+          name: vsix-*
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
