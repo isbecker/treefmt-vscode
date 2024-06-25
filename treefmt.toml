@@ -12,6 +12,7 @@ includes = ["*.ts"]
 [formatter.md]
 command = "mdformat"
 includes = ["*.md"]
+excludes = ["LICENSE.md"]
 
 [formatter.nix]
 command = "nixpkgs-fmt"
