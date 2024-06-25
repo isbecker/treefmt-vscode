@@ -12,3 +12,13 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+
+flake.nix
+flake.lock
+.envrc
+.env.local
+.devenv
+.direnv
+treefmt.toml
+biome.json
+.pre-commit-config.yaml
