@@ -109,6 +109,8 @@ jobs:
     steps:
       - name: Download VSIX
         uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -126,7 +128,7 @@ jobs:
       - name: Download VSIX
         uses: actions/download-artifact@v4
         with:
-          name: vsix
+          merge-multiple: true
 
       - name: Install Node.js
         uses: actions/setup-node@v4
