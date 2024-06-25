@@ -1,93 +1,55 @@
-# treefmt-vscode README
+# Treefmt VS Code Extension
 
-`treefmt-vscode` is a VS Code extension that integrates the `treefmt` formatter into your development workflow. `treefmt` is a versatile formatting tool that supports multiple languages and formatters through a single configuration file.
+This VS Code extension provides integration with [treefmt](https://github.com/numtide/treefmt), a multi-language code formatter. It allows you to format your code based on the configuration defined in your `treefmt.toml` file.
 
 ## Features
 
-- **Automatic Formatting**: Automatically format your files on save or through a command.
-- **Supports Multiple Formatters**: Leverage the power of `treefmt` to format JavaScript, TypeScript, Python, Markdown, HTML, CSS, JSON, YAML, and more.
-- **Configuration File**: Uses a `treefmt.toml` file to define your formatting rules.
-- **Bundled or System `treefmt`**: Choose between using the bundled version of `treefmt` or the system-installed version.
-- **Supports Multiple Versions**: Supports both the original Rust version and the new Go-based `treefmt2` version.
+- Automatically formats your code based on `treefmt.toml` configuration.
+- Supports a wide range of languages through various formatters.
+- No additional configuration needed within the extension.
+- Can be set as the default formatter in VS Code.
 
-## Requirements
+## Installation
 
-- Visual Studio Code version 1.60.0 or higher.
-- `treefmt.toml` configuration file in the root of your project.
+### Stable Version
 
-## Extension Settings
+The stable version of this extension uses the current stable release of `treefmt`. You can install it directly from the Visual Studio [Marketplace](https://marketplace.visualstudio.com/items?itemName=ibecker.treefmt-vscode).
 
-This extension contributes the following settings:
+### Pre-release Version
 
-- `treefmt.useVersion`: Choose which version of `treefmt` to use (`treefmt` for the original version or `treefmt2` for the new version).
+If you want to use the new `treefmt` v2 (Go rewrite), you can install the pre-release version of this extension. This version includes the latest `treefmt` v2 release candidate.
 
-## Commands
+To install the pre-release version:
 
-This extension provides the following commands:
+1. Search for `treefmt-vscode` in the Extensions view (`Ctrl+Shift+X`).
+1. Click the dropdown arrow next to the Install button.
+1. Select `Install Pre-Release Version`.
 
-- `treefmt-vscode.runTreefmt`: Run `treefmt` on the current file.
+You will be using the latest pre-release version of the extension, which includes the new `treefmt` v2.0.0-rc5.
 
 ## Usage
 
-1. **Install the Extension**: Search for `treefmt-vscode` in the VS Code marketplace and install it.
-1. **Create Configuration**: Create a `treefmt.toml` file in the root of your project and define your formatting rules.
-1. **Run Formatter**: Use the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS) and run `Treefmt: Run Treefmt` or set up auto-format on save.
+### Configuration
 
-## Example `treefmt.toml`
+The extension uses the `treefmt.toml` file located in the root of your project directory.
+You can create this file manually or use the `treefmt --init` command to generate a template.
+If you try to format a file without a `treefmt.toml` file, the extension will display an message and offer
+to run `treefmt --init` on your behalf.
 
-```toml
-[formatter.prettier]
-command = "prettier --write"
-options = []
-includes = ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"]
+### Setting as Default Formatter
 
-[formatter.black]
-command = "black"
-options = []
-includes = ["**/*.py"]
+To set this extension as the default formatter for your workspace:
 
-[formatter.prettier-markdown]
-command = "prettier --write"
-options = []
-includes = ["**/*.md"]
+1. Open VS Code settings (`Ctrl+,`).
+1. Search for `default formatter`.
+1. Set the default formatter to `Treefmt`.
 
-[formatter.prettier-html]
-command = "prettier --write"
-options = []
-includes = ["**/*.html"]
+Now, every time you format a file, `treefmt` will be used according to your `treefmt.toml` configuration.
 
-[formatter.prettier-css]
-command = "prettier --write"
-options = []
-includes = ["**/*.css", "**/*.scss", "**/*.sass"]
+## Contributing
 
-[formatter.prettier-json]
-command = "prettier --write"
-options = []
-includes = ["**/*.json"]
-
-[formatter.prettier-yaml]
-command = "prettier --write"
-options = []
-includes = ["**/*.yaml", "**/*.yml"]
-```
-
-## Known Issues
-
-- Ensure `treefmt.toml` is properly configured in the root of your project.
-- For any issues related to `treefmt` itself, please refer to the [treefmt GitHub repository](https://github.com/numtide/treefmt).
-
-## Release Notes
-
-### 1.0.0
-
-- Initial release of `treefmt-vscode`.
-- Support for both `treefmt` and `treefmt2`.
-- Configuration option to choose which version to use.
-- Automatic formatting and command to run `treefmt`.
+Contributions are welcome! Feel free to open issues or submit pull requests to improve the extension.
 
 ## License
 
-GPL-3.0
-
-**Enjoy using treefmt-vscode!**
+This project is licensed under the GPLv3 License.
