@@ -1,8 +1,8 @@
 [formatter.typos]
 command = "typos"
-includes = ["*"]
+includes = ["*.md", "*.ts", "*.nix"]
 options = ["--write-changes"]
-priority = 0                  # typos should run first
+priority = 0                         # typos should run first
 
 [formatter.typescript]
 command = "biome"
