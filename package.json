@@ -4,6 +4,7 @@
   "description": "treefmt streamlines the process of applying formatters to your project, making it a breeze with just one command line.",
   "version": "2.0.0",
   "publisher": "ibecker",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -24,6 +25,27 @@
       {
         "command": "extension.runTreefmt",
         "title": "Run Treefmt"
+      },
+      {
+        "command": "extension.initTreefmt",
+        "title": "Initialize treefmt.toml configuration"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "treefmt",
+        "properties": {
+          "treefmt.command": {
+            "type": "string",
+            "default": null,
+            "description": "Path to the treefmt executable, e.g. /usr/local/bin/treefmt. If not set, the extension will use the bundled treefmt binary."
+          },
+          "treefmt.config": {
+            "type": "string",
+            "default": null,
+            "description": "Path to the treefmt configuration file, e.g. treefmt.toml. If not set, the extension will look for a treefmt.toml file in the workspace root."
+          }
+        }
       }
     ]
   },
