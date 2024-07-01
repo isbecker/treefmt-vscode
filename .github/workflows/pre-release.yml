@@ -63,7 +63,7 @@ jobs:
               "arm64") FILENAME="treefmt-aarch64-pc-windows-msvc.zip";;
               *) echo "Unsupported platform/arch combination" && exit 1;;
             esac
-            TREEFMT_VERSION="0.6.1"
+            TREEFMT_VERSION="v0.6.1"
             LATEST="false"
           else
             case "${{ matrix.platform }}-${{ matrix.arch }}" in
