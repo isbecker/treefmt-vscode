@@ -24,21 +24,15 @@ This VS Code extension provides integration with [treefmt](https://github.com/nu
 
 ## Installation
 
-### Stable Version
+You can install it directly from the Visual Studio [Marketplace](https://marketplace.visualstudio.com/items?itemName=ibecker.treefmt-vscode).
 
-The stable version of this extension uses the current stable release of `treefmt`. You can install it directly from the Visual Studio [Marketplace](https://marketplace.visualstudio.com/items?itemName=ibecker.treefmt-vscode).
+Alternatively, open the Extensions view (Ctrl+Shift+X), search for `treefmt`, and click Install.
 
-### Pre-release Version
+Or, you can install it from the command line:
 
-If you want to use the new `treefmt` v2 (Go rewrite), you can install the pre-release version of this extension. This version includes the latest `treefmt` v2 release candidate.
-
-To install the pre-release version:
-
-1. Search for `treefmt-vscode` in the Extensions view (`Ctrl+Shift+X`).
-1. Click the dropdown arrow next to the Install button.
-1. Select `Install Pre-Release Version`.
-
-You will be using the latest pre-release version of the extension, which includes the new `treefmt` v2.0.0-rc5.
+```bash
+code --install-extension ibecker.treefmt-vscode
+```
 
 ## Usage
 
