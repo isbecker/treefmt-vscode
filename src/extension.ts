@@ -101,7 +101,10 @@ async function readConfig() {
 	if (treefmtTomlPath) {
 		configPath = treefmtTomlPath;
 	} else {
-		configPath = path.join(workspaceRoot ?? "", "treefmt.toml");
+		configPath = path.join(workspaceRoot ?? "", ".treefmt.toml");
+		if (!fs.existsSync(configPath)) {
+			configPath = path.join(workspaceRoot ?? "", "treefmt.toml");
+		}
 	}
 }
 
