@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 
 let ctx: vscode.ExtensionContext;
 let command: string;
-let configPath: string;
+let configPath: string | null;
 
 async function getWorkspaceRoot() {
 	const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -49,10 +49,14 @@ async function runTreefmt() {
 	}
 
 	await readConfig();
+	if (configPath && !path.isAbsolute(configPath)) {
+		configPath = path.join(workspaceRoot, configPath);
+	}
+	if (!configPath || !fs.existsSync(configPath)) {
+		let configFile = configPath ?? "treefmt.toml";
 
-	if (!fs.existsSync(configPath)) {
 		const create = await vscode.window.showInformationMessage(
-			"No treefmt.toml found. Would you like to create one?",
+			`${configFile} not found. Would you like to create treefmt.toml?`,
 			"Yes",
 			"No",
 		);
@@ -66,15 +70,22 @@ async function runTreefmt() {
 		return;
 	}
 
+	let args = "";
+	if (configPath) {
+		if (!path.isAbsolute(configPath)) {
+			configPath = path.join(workspaceRoot, configPath);
+		}
+		args = ` --config-file=${configPath}`;
+	}
+	args += ` --working-dir=${workspaceRoot}`;
 	exec(
-		`${command} --config-file=${configPath}`,
+		`${command} ${args} ${editor.document.fileName}`,
 		{ cwd: workspaceRoot },
 		(error, stdout, stderr) => {
 			if (error) {
 				vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
 				return;
 			}
-			vscode.window.showInformationMessage("treefmt ran successfully.");
 		},
 	);
 }
@@ -97,11 +108,19 @@ async function readConfig() {
 		command = homedir() + command.slice("~".length);
 	}
 
-	const treefmtTomlPath: string | null = config.get("config") as string | null;
+	const treefmtTomlPath = config.get<string | null>("config");
 	if (treefmtTomlPath) {
 		configPath = treefmtTomlPath;
 	} else {
-		configPath = path.join(workspaceRoot ?? "", "treefmt.toml");
+		const possibleConfigs = ["treefmt.toml", ".treefmt.toml"];
+		configPath = null;
+		for (const configFileName of possibleConfigs) {
+			const possiblePath = path.join(workspaceRoot ?? "", configFileName);
+			if (fs.existsSync(possiblePath)) {
+				configPath = possiblePath;
+				break;
+			}
+		}
 	}
 }
 
