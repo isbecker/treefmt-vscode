@@ -113,6 +113,52 @@ async function readConfig() {
 		}
 	}
 }
+async function runTreefmtWithStdin() {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showInformationMessage("No active editor found.");
+		return;
+	}
+	const workspaceRoot = await getWorkspaceRoot();
+	if (!workspaceRoot) {
+		vscode.window.showInformationMessage("No workspace root found.");
+		return;
+	}
+
+	await readConfig();
+	let args = `--working-dir=${workspaceRoot}`;
+	if (configPath) {
+		if (!path.isAbsolute(configPath)) {
+			configPath = path.join(workspaceRoot, configPath);
+		}
+		args += ` --config-file=${configPath}`;
+	}
+	args += ` --stdin ${path.extname(editor.document.fileName)}`;
+
+	const documentText = editor.document.getText();
+	const childProcess = exec(
+		`${command} ${args}`,
+		{ cwd: workspaceRoot },
+		async (error, stdout, stderr) => {
+			if (error) {
+				vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
+				return;
+			}
+			const edit = new vscode.WorkspaceEdit();
+			const fullRange = new vscode.Range(
+				editor.document.positionAt(0),
+				editor.document.positionAt(documentText.length),
+			);
+			edit.replace(editor.document.uri, fullRange, stdout);
+			await vscode.workspace.applyEdit(edit);
+		},
+	);
+
+	if (childProcess.stdin) {
+		childProcess.stdin.write(documentText);
+		childProcess.stdin.end();
+	}
+}
 
 export function activate(context: vscode.ExtensionContext) {
 	ctx = context;
@@ -120,6 +166,10 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand("extension.runTreefmt", runTreefmt),
 		vscode.commands.registerCommand("extension.initTreefmt", initTreefmt),
+		vscode.commands.registerCommand(
+			"extension.runTreefmtWithStdin",
+			runTreefmtWithStdin,
+		),
 	);
 
 	vscode.languages.registerDocumentFormattingEditProvider(

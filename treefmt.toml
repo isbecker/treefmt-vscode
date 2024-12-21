@@ -1,24 +1,33 @@
 [formatter.typos]
-command = "typos"
+command  = "typos"
 includes = ["*.md", "*.ts", "*.nix"]
-options = ["--write-changes"]
+options  = ["--write-changes"]
 priority = 0                         # typos should run first
 
 [formatter.typescript]
-command = "biome"
-options = ["format", "--write", "--no-errors-on-unmatched"]
+command  = "biome"
+options  = ["format", "--write", "--no-errors-on-unmatched"]
 includes = ["*.ts", "*.json"]
 
 [formatter.md]
-command = "mdformat"
+command  = "mdformat"
 includes = ["*.md"]
 excludes = ["LICENSE.md"]
 
 [formatter.nix]
-command = "nixpkgs-fmt"
+command  = "nixpkgs-fmt"
 includes = ["*.nix"]
 
 [formatter.toml]
 command = "taplo"
-options = ["fmt"]
+options = [
+  "fmt",
+  "-oalign_entries=true",
+  "-oalign_comments=true",
+  "-oarray_trailing_comma=true",
+  "-oarray_auto_expand=true",
+  "-oarray_auto_collapse=true",
+  "-oindent_tables=false",
+  "-oindent_entries=false",
+]
 includes = ["*.toml", "*.editorconfig"]
