@@ -52,23 +52,6 @@ async function runTreefmt() {
 	if (configPath && !path.isAbsolute(configPath)) {
 		configPath = path.join(workspaceRoot, configPath);
 	}
-	if (!configPath || !fs.existsSync(configPath)) {
-		let configFile = configPath ?? "treefmt.toml";
-
-		const create = await vscode.window.showInformationMessage(
-			`${configFile} not found. Would you like to create treefmt.toml?`,
-			"Yes",
-			"No",
-		);
-
-		if (create === "Yes") {
-			initTreefmt();
-		}
-
-		// Early return to prevent running treefmt with a config file that isn't configured
-		// treefmt --init makes a treefmt.toml file but it doesn't have any rules in it
-		return;
-	}
 
 	let args = "";
 	if (configPath) {
@@ -81,9 +64,16 @@ async function runTreefmt() {
 	exec(
 		`${command} ${args} ${editor.document.fileName}`,
 		{ cwd: workspaceRoot },
-		(error, stdout, stderr) => {
+		async (error, stdout, stderr) => {
 			if (error) {
-				vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
+				const create = await vscode.window.showErrorMessage(
+					`Error running ${command}: ${stderr}`,
+					"OK",
+					"Create treefmt.toml",
+				);
+				if (create === "Create treefmt.toml") {
+					initTreefmt();
+				}
 				return;
 			}
 		},
