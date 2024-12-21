@@ -50,13 +50,13 @@ async function runTreefmt() {
 
 	await readConfig();
 	if (configPath && !path.isAbsolute(configPath)) {
-		configPath = path.join(workspaceRoot, configPath);
+		configPath = path.join(workspaceRoot, path.normalize(configPath));
 	}
 
 	let args = "";
 	if (configPath) {
 		if (!path.isAbsolute(configPath)) {
-			configPath = path.join(workspaceRoot, configPath);
+			configPath = path.join(workspaceRoot, path.normalize(configPath));
 		}
 		args = ` --config-file=${configPath}`;
 	}
@@ -95,7 +95,7 @@ async function readConfig() {
 		).fsPath;
 	}
 	if (command.startsWith("~/")) {
-		command = homedir() + command.slice("~".length);
+		command = path.join(homedir(), command.slice("~".length));
 	}
 
 	const treefmtTomlPath = config.get<string | null>("config");
@@ -113,6 +113,7 @@ async function readConfig() {
 		}
 	}
 }
+
 async function getFormattedTextFromTreefmt(): Promise<string | null> {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -129,7 +130,7 @@ async function getFormattedTextFromTreefmt(): Promise<string | null> {
 	let args = `--working-dir=${workspaceRoot}`;
 	if (configPath) {
 		if (!path.isAbsolute(configPath)) {
-			configPath = path.join(workspaceRoot, configPath);
+			configPath = path.join(workspaceRoot, path.normalize(configPath));
 		}
 		args += ` --config-file=${configPath}`;
 	}
