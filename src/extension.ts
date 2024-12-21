@@ -50,13 +50,13 @@ async function runTreefmt() {
 
 	await readConfig();
 	if (configPath && !path.isAbsolute(configPath)) {
-		configPath = path.join(workspaceRoot, configPath);
+		configPath = path.join(workspaceRoot, path.normalize(configPath));
 	}
 
 	let args = "";
 	if (configPath) {
 		if (!path.isAbsolute(configPath)) {
-			configPath = path.join(workspaceRoot, configPath);
+			configPath = path.join(workspaceRoot, path.normalize(configPath));
 		}
 		args = ` --config-file=${configPath}`;
 	}
@@ -95,7 +95,7 @@ async function readConfig() {
 		).fsPath;
 	}
 	if (command.startsWith("~/")) {
-		command = homedir() + command.slice("~".length);
+		command = path.join(homedir(), command.slice("~".length));
 	}
 
 	const treefmtTomlPath = config.get<string | null>("config");
@@ -114,12 +114,81 @@ async function readConfig() {
 	}
 }
 
+async function getFormattedTextFromTreefmt(): Promise<string | null> {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showInformationMessage("No active editor found.");
+		return null;
+	}
+	const workspaceRoot = await getWorkspaceRoot();
+	if (!workspaceRoot) {
+		vscode.window.showInformationMessage("No workspace root found.");
+		return null;
+	}
+
+	await readConfig();
+	let args = `--working-dir=${workspaceRoot}`;
+	if (configPath) {
+		if (!path.isAbsolute(configPath)) {
+			configPath = path.join(workspaceRoot, path.normalize(configPath));
+		}
+		args += ` --config-file=${configPath}`;
+	}
+	args += ` --stdin ${path.extname(editor.document.fileName)}`;
+
+	const documentText = editor.document.getText();
+	return new Promise((resolve, reject) => {
+		const childProcess = exec(
+			`${command} ${args}`,
+			{ cwd: workspaceRoot },
+			(error, stdout, stderr) => {
+				if (error) {
+					vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
+					reject(stderr);
+					return;
+				}
+				resolve(stdout);
+			},
+		);
+
+		if (childProcess.stdin) {
+			childProcess.stdin.write(documentText);
+			childProcess.stdin.end();
+		}
+	});
+}
+
+async function runTreefmtWithStdin() {
+	const formattedText = await getFormattedTextFromTreefmt();
+	if (formattedText === null) {
+		return;
+	}
+
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		return;
+	}
+
+	const documentText = editor.document.getText();
+	const edit = new vscode.WorkspaceEdit();
+	const fullRange = new vscode.Range(
+		editor.document.positionAt(0),
+		editor.document.positionAt(documentText.length),
+	);
+	edit.replace(editor.document.uri, fullRange, formattedText);
+	await vscode.workspace.applyEdit(edit);
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	ctx = context;
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand("extension.runTreefmt", runTreefmt),
 		vscode.commands.registerCommand("extension.initTreefmt", initTreefmt),
+		vscode.commands.registerCommand(
+			"extension.runTreefmtWithStdin",
+			runTreefmtWithStdin,
+		),
 	);
 
 	vscode.languages.registerDocumentFormattingEditProvider(
@@ -128,9 +197,16 @@ export function activate(context: vscode.ExtensionContext) {
 			async provideDocumentFormattingEdits(
 				document: vscode.TextDocument,
 			): Promise<vscode.TextEdit[]> {
-				await runTreefmt();
+				const formattedText = await getFormattedTextFromTreefmt();
+				if (formattedText === null) {
+					return [];
+				}
 
-				return [];
+				const fullRange = new vscode.Range(
+					document.positionAt(0),
+					document.positionAt(document.getText().length),
+				);
+				return [vscode.TextEdit.replace(fullRange, formattedText)];
 			},
 		},
 	);
