@@ -113,16 +113,16 @@ async function readConfig() {
 		}
 	}
 }
-async function runTreefmtWithStdin() {
+async function getFormattedTextFromTreefmt(): Promise<string | null> {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
 		vscode.window.showInformationMessage("No active editor found.");
-		return;
+		return null;
 	}
 	const workspaceRoot = await getWorkspaceRoot();
 	if (!workspaceRoot) {
 		vscode.window.showInformationMessage("No workspace root found.");
-		return;
+		return null;
 	}
 
 	await readConfig();
@@ -136,28 +136,46 @@ async function runTreefmtWithStdin() {
 	args += ` --stdin ${path.extname(editor.document.fileName)}`;
 
 	const documentText = editor.document.getText();
-	const childProcess = exec(
-		`${command} ${args}`,
-		{ cwd: workspaceRoot },
-		async (error, stdout, stderr) => {
-			if (error) {
-				vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
-				return;
-			}
-			const edit = new vscode.WorkspaceEdit();
-			const fullRange = new vscode.Range(
-				editor.document.positionAt(0),
-				editor.document.positionAt(documentText.length),
-			);
-			edit.replace(editor.document.uri, fullRange, stdout);
-			await vscode.workspace.applyEdit(edit);
-		},
-	);
+	return new Promise((resolve, reject) => {
+		const childProcess = exec(
+			`${command} ${args}`,
+			{ cwd: workspaceRoot },
+			(error, stdout, stderr) => {
+				if (error) {
+					vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
+					reject(stderr);
+					return;
+				}
+				resolve(stdout);
+			},
+		);
 
-	if (childProcess.stdin) {
-		childProcess.stdin.write(documentText);
-		childProcess.stdin.end();
+		if (childProcess.stdin) {
+			childProcess.stdin.write(documentText);
+			childProcess.stdin.end();
+		}
+	});
+}
+
+async function runTreefmtWithStdin() {
+	const formattedText = await getFormattedTextFromTreefmt();
+	if (formattedText === null) {
+		return;
 	}
+
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		return;
+	}
+
+	const documentText = editor.document.getText();
+	const edit = new vscode.WorkspaceEdit();
+	const fullRange = new vscode.Range(
+		editor.document.positionAt(0),
+		editor.document.positionAt(documentText.length),
+	);
+	edit.replace(editor.document.uri, fullRange, formattedText);
+	await vscode.workspace.applyEdit(edit);
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -178,9 +196,16 @@ export function activate(context: vscode.ExtensionContext) {
 			async provideDocumentFormattingEdits(
 				document: vscode.TextDocument,
 			): Promise<vscode.TextEdit[]> {
-				await runTreefmt();
+				const formattedText = await getFormattedTextFromTreefmt();
+				if (formattedText === null) {
+					return [];
+				}
 
-				return [];
+				const fullRange = new vscode.Range(
+					document.positionAt(0),
+					document.positionAt(document.getText().length),
+				);
+				return [vscode.TextEdit.replace(fullRange, formattedText)];
 			},
 		},
 	);
