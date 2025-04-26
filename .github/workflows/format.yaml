@@ -1,0 +1,21 @@
+name: Format Code
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/magic-nix-cache-action@main
+    - name: Install formatting tools
+      run: nix-env -f "<nixpkgs>" -iA nixpkgs-fmt treefmt2 biome yamlfmt mdformat taplo typos
+    - name: Run treefmt
+      uses: isbecker/treefmt-action@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        version: 'latest'
+        ci: true

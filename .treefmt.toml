@@ -31,3 +31,20 @@ options = [
   "-oindent_entries=false",
 ]
 includes = ["*.toml", "*.editorconfig"]
+
+[formatter.yaml]
+command = "yamlfmt"
+options = [
+  "-formatter",
+  "indent=2",
+  "-formatter",
+  "retain_line_breaks=true",
+  "-formatter",
+  "indentless_arrays=true",
+  "-formatter",
+  "eof_newline=true",
+  "-formatter",
+  "scan_folded_as_literal=true",
+]
+includes = ["*.yaml", "*.yml"]
+excludes = [".pre-commit-config.yaml"]

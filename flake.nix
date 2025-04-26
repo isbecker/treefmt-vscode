@@ -50,6 +50,8 @@
                   pkgs.mdformat
                   pkgs.taplo # TOML - primarily just for the treefmt config files
                   pkgs.typos
+                  pkgs.yamlfmt
+
                 ];
               };
             };
@@ -57,8 +59,7 @@
 
           packages = [
             config.packages.default
-            pkgs.just
-            pkgs.direnv
+
           ];
         };
       };

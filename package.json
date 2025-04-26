@@ -2,7 +2,7 @@
 	"name": "treefmt-vscode",
 	"displayName": "treefmt-vscode",
 	"description": "treefmt streamlines the process of applying formatters to your project, making it a breeze with just one command line.",
-	"version": "2.1.1",
+	"version": "2.2.1",
 	"publisher": "ibecker",
 	"icon": "icon.png",
 	"engines": {
@@ -43,6 +43,16 @@
 						"type": "string",
 						"default": null,
 						"description": "Path to the treefmt configuration file, e.g. treefmt.toml. If not set, the extension will look for a treefmt.toml file in the workspace root."
+					},
+					"treefmt.useStdin": {
+						"type": "boolean",
+						"default": false,
+						"description": "Toggle between using stdin or the legacy onsave version for formatting."
+					},
+					"treefmt.debug": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable debug logging for the extension."
 					}
 				}
 			}
@@ -69,7 +79,7 @@
 		"@typescript-eslint/eslint-plugin": "^7.11.0",
 		"@typescript-eslint/parser": "^7.11.0",
 		"@vscode/test-cli": "^0.0.9",
-		"@vscode/test-electron": "^2.4.0",
+		"@vscode/test-electron": "^2.4.1",
 		"@vscode/vsce": "^2.29.0",
 		"esbuild": "^0.21.5",
 		"eslint": "^8.57.0",

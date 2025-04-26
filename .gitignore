@@ -8,3 +8,4 @@ node_modules
 .direnv
 .devenv
 .env.local
+.pre-commit-config.yaml
