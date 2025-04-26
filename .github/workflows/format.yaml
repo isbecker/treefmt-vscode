@@ -19,3 +19,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         version: 'latest'
         ci: true
+        config_file: '.treefmt.toml'

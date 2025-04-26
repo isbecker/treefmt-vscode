@@ -46,12 +46,12 @@
 					},
 					"treefmt.useStdin": {
 						"type": "boolean",
-						"default": false,
+						"default": true,
 						"description": "Toggle between using stdin or the legacy onsave version for formatting."
 					},
 					"treefmt.debug": {
 						"type": "boolean",
-						"default": true,
+						"default": false,
 						"description": "Enable debug logging for the extension."
 					}
 				}
