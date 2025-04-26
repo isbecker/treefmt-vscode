@@ -2,7 +2,7 @@ name: Pre-release
 on:
   push:
     tags:
-      - 'v*-rc*' # Matches tags like v2.0.0-rc1, v2.0.0-rc2, etc.
+    - 'v*-rc*' # Matches tags like v2.0.0-rc1, v2.0.0-rc2, etc.
 
 permissions:
   contents: write
@@ -15,138 +15,138 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
-            code-target: linux-x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: arm64
-            code-target: linux-arm64
-          - os: macos-latest
-            platform: darwin
-            arch: amd64
-            code-target: darwin-x64
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
-            code-target: darwin-arm64
-          - os: windows-latest
-            platform: windows
-            arch: amd64
-            code-target: win32-x64
-          - os: windows-latest
-            platform: windows
-            arch: arm64
-            code-target: win32-arm64
+        - os: ubuntu-latest
+          platform: linux
+          arch: amd64
+          code-target: linux-x64
+        - os: ubuntu-latest
+          platform: linux
+          arch: arm64
+          code-target: linux-arm64
+        - os: macos-latest
+          platform: darwin
+          arch: amd64
+          code-target: darwin-x64
+        - os: macos-latest
+          platform: darwin
+          arch: arm64
+          code-target: darwin-arm64
+        - os: windows-latest
+          platform: windows
+          arch: amd64
+          code-target: win32-x64
+        - os: windows-latest
+          platform: windows
+          arch: arm64
+          code-target: win32-arm64
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: ${{ env.FETCH_DEPTH }}
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ env.FETCH_DEPTH }}
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
 
-      - name: Determine treefmt version and filename
-        id: determine-version
-        shell: bash
-        run: |
-          if [[ "${{ matrix.platform }}" == 'windows' ]]; then
-            echo "PRERELEASE=false" >> $GITHUB_ENV
-            case "${{ matrix.arch }}" in
-              "amd64") FILENAME="treefmt-x86_64-pc-windows-msvc.zip";;
-              "arm64") FILENAME="treefmt-aarch64-pc-windows-msvc.zip";;
-              *) echo "Unsupported platform/arch combination" && exit 1;;
-            esac
-          else
-            echo "PRERELEASE=true" >> $GITHUB_ENV
-            case "${{ matrix.platform }}-${{ matrix.arch }}" in
-              "linux-amd64") FILENAME="treefmt_2.0.0-rc*_linux_amd64.tar.gz";;
-              "linux-arm64") FILENAME="treefmt_2.0.0-rc*_linux_arm64.tar.gz";;
-              "darwin-amd64") FILENAME="treefmt_2.0.0-rc*_darwin_amd64.tar.gz";;
-              "darwin-arm64") FILENAME="treefmt_2.0.0-rc*_darwin_arm64.tar.gz";;
-              *) echo "Unsupported platform/arch combination" && exit 1;;
-            esac
-          fi
-          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+    - name: Determine treefmt version and filename
+      id: determine-version
+      shell: bash
+      run: |
+        if [[ "${{ matrix.platform }}" == 'windows' ]]; then
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+          case "${{ matrix.arch }}" in
+            "amd64") FILENAME="treefmt-x86_64-pc-windows-msvc.zip";;
+            "arm64") FILENAME="treefmt-aarch64-pc-windows-msvc.zip";;
+            *) echo "Unsupported platform/arch combination" && exit 1;;
+          esac
+        else
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+          case "${{ matrix.platform }}-${{ matrix.arch }}" in
+            "linux-amd64") FILENAME="treefmt_2.0.0-rc*_linux_amd64.tar.gz";;
+            "linux-arm64") FILENAME="treefmt_2.0.0-rc*_linux_arm64.tar.gz";;
+            "darwin-amd64") FILENAME="treefmt_2.0.0-rc*_darwin_amd64.tar.gz";;
+            "darwin-arm64") FILENAME="treefmt_2.0.0-rc*_darwin_arm64.tar.gz";;
+            *) echo "Unsupported platform/arch combination" && exit 1;;
+          esac
+        fi
+        echo "FILENAME=$FILENAME" >> $GITHUB_ENV
 
-      - name: Download treefmt
-        id: download-release
-        uses: robinraju/release-downloader@v1.10
-        with:
-          repository: "numtide/treefmt"
-          latest: true
-          preRelease: ${{ env.PRERELEASE }}
-          fileName: ${{ env.FILENAME }}
-          out-file-path: "downloads"
-          extract: true
+    - name: Download treefmt
+      id: download-release
+      uses: robinraju/release-downloader@v1.10
+      with:
+        repository: "numtide/treefmt"
+        latest: true
+        preRelease: ${{ env.PRERELEASE }}
+        fileName: ${{ env.FILENAME }}
+        out-file-path: "downloads"
+        extract: true
 
-      - name: Rename treefmt binary
-        shell: bash
-        run: |
-          mkdir -p bin
-          if [[ "${{ matrix.platform }}" == 'windows' ]]; then
-            mv downloads/treefmt.exe bin/treefmt
-          else
-            mv downloads/treefmt bin/treefmt
-          fi
-          chmod +x bin/treefmt
+    - name: Rename treefmt binary
+      shell: bash
+      run: |
+        mkdir -p bin
+        if [[ "${{ matrix.platform }}" == 'windows' ]]; then
+          mv downloads/treefmt.exe bin/treefmt
+        else
+          mv downloads/treefmt bin/treefmt
+        fi
+        chmod +x bin/treefmt
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Package Extension
-        run: npx vsce package -o "./treefmt-${{ matrix.code-target }}.vsix" --target ${{ matrix.code-target }} --pre-release
+    - name: Package Extension
+      run: npx vsce package -o "./treefmt-${{ matrix.code-target }}.vsix" --target ${{ matrix.code-target }} --pre-release
 
-      - name: Upload VSIX
-        uses: actions/upload-artifact@v4
-        with:
-          name: vsix-${{ matrix.platform }}-${{ matrix.arch }}
-          path: "./treefmt-${{ matrix.code-target }}.vsix"
+    - name: Upload VSIX
+      uses: actions/upload-artifact@v4
+      with:
+        name: vsix-${{ matrix.platform }}-${{ matrix.arch }}
+        path: "./treefmt-${{ matrix.code-target }}.vsix"
 
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: package
     steps:
-      - name: Download VSIX
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
+    - name: Download VSIX
+      uses: actions/download-artifact@v4
+      with:
+        merge-multiple: true
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            treefmt-*.vsix
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          treefmt-*.vsix
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish Extension
     runs-on: ubuntu-latest
     needs: package
     steps:
-      - name: Download VSIX
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
+    - name: Download VSIX
+      uses: actions/download-artifact@v4
+      with:
+        merge-multiple: true
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
 
-      - name: Publish to Marketplace
-        run: npx @vscode/vsce publish --packagePath treefmt-*.vsix --pat ${{ secrets.MARKETPLACE_TOKEN }} --pre-release
+    - name: Publish to Marketplace
+      run: npx @vscode/vsce publish --packagePath treefmt-*.vsix --pat ${{ secrets.MARKETPLACE_TOKEN }} --pre-release
 
-      # - name: Publish to OpenVSX
-      #   run: npx ovsx publish --packagePath treefmt-*.vsix --pat ${{ secrets.OPENVSX_TOKEN }}
-      #   timeout-minutes: 2
+    # - name: Publish to OpenVSX
+    #   run: npx ovsx publish --packagePath treefmt-*.vsix --pat ${{ secrets.OPENVSX_TOKEN }}
+    #   timeout-minutes: 2
