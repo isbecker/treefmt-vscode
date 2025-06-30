@@ -13,7 +13,10 @@
 		"url": "https://github.com/isbecker/treefmt-vscode"
 	},
 	"categories": ["Other", "Formatters"],
-	"activationEvents": ["workspaceContains:treefmt.toml"],
+	"activationEvents": [
+		"workspaceContains:treefmt.toml",
+		"workspaceContains:.treefmt.toml"
+	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
