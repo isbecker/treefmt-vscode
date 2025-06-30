@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { homedir } from "os";
 import * as path from "path";
 import * as vscode from "vscode";
-import { log, outputChannel } from "./extension"; // Import the shared log function
+import { diagnosticCollection, log, outputChannel } from "./extension"; // Import the shared log function
 
 let command: string;
 let configPath: string | null = null;
@@ -161,8 +161,7 @@ function showDiagnostic(document: vscode.TextDocument, message: string) {
 		message,
 		vscode.DiagnosticSeverity.Warning,
 	);
-	const collection = vscode.languages.createDiagnosticCollection("treefmt");
-	collection.set(document.uri, [diagnostic]);
+	diagnosticCollection.set(document.uri, [diagnostic]);
 }
 
 export async function getFormattedTextFromTreefmt(
