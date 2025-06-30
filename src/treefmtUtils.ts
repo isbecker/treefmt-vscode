@@ -109,6 +109,7 @@ export async function runTreefmtOnFile(
 				});
 			return;
 		}
+		clearDiagnostic(editor.document);
 
 		log(`Command completed successfully: ${fullCommand}`);
 
@@ -164,6 +165,10 @@ function showDiagnostic(document: vscode.TextDocument, message: string) {
 	diagnosticCollection.set(document.uri, [diagnostic]);
 }
 
+function clearDiagnostic(document: vscode.TextDocument) {
+	diagnosticCollection.delete(document.uri);
+}
+
 export async function getFormattedTextFromTreefmt(
 	ctx: vscode.ExtensionContext,
 	text: string,
@@ -215,6 +220,7 @@ export async function getFormattedTextFromTreefmt(
 					reject(stderr);
 					return;
 				}
+				clearDiagnostic(editor.document);
 				resolve(stdout);
 			},
 		);
