@@ -37,7 +37,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Initialize diagnostic collection
 	diagnosticCollection = vscode.languages.createDiagnosticCollection("treefmt");
-	context.subscriptions.push(diagnosticCollection);
+	context.subscriptions.push(
+		diagnosticCollection,
+		// Clear diagnostics for a closed document
+		vscode.workspace.onDidCloseTextDocument(document => {
+			diagnosticCollection.delete(document.uri);
+		})
+	);
 
 	// Update settings when configuration changes
 	context.subscriptions.push(
