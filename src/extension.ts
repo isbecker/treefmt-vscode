@@ -40,9 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		diagnosticCollection,
 		// Clear diagnostics for a closed document
-		vscode.workspace.onDidCloseTextDocument(document => {
+		vscode.workspace.onDidCloseTextDocument((document) => {
 			diagnosticCollection.delete(document.uri);
-		})
+		}),
 	);
 
 	// Update settings when configuration changes
