@@ -10,6 +10,8 @@ let ctx: vscode.ExtensionContext;
 let useStdin: boolean = true;
 let debugMode: boolean = false;
 
+export let diagnosticCollection: vscode.DiagnosticCollection;
+
 // Create output channel for logging
 export const outputChannel = vscode.window.createOutputChannel("Treefmt");
 
@@ -32,6 +34,16 @@ export function activate(context: vscode.ExtensionContext) {
 		log("Activating Treefmt extension");
 		log(`Initial useStdin setting: ${useStdin}`);
 	}
+
+	// Initialize diagnostic collection
+	diagnosticCollection = vscode.languages.createDiagnosticCollection("treefmt");
+	context.subscriptions.push(
+		diagnosticCollection,
+		// Clear diagnostics for a closed document
+		vscode.workspace.onDidCloseTextDocument((document) => {
+			diagnosticCollection.delete(document.uri);
+		}),
+	);
 
 	// Update settings when configuration changes
 	context.subscriptions.push(

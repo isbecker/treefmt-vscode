@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { homedir } from "os";
 import * as path from "path";
 import * as vscode from "vscode";
-import { log, outputChannel } from "./extension"; // Import the shared log function
+import { diagnosticCollection, log, outputChannel } from "./extension"; // Import the shared log function
 
 let command: string;
 let configPath: string | null = null;
@@ -109,6 +109,7 @@ export async function runTreefmtOnFile(
 				});
 			return;
 		}
+		clearDiagnostic(editor.document);
 
 		log(`Command completed successfully: ${fullCommand}`);
 
@@ -161,8 +162,11 @@ function showDiagnostic(document: vscode.TextDocument, message: string) {
 		message,
 		vscode.DiagnosticSeverity.Warning,
 	);
-	const collection = vscode.languages.createDiagnosticCollection("treefmt");
-	collection.set(document.uri, [diagnostic]);
+	diagnosticCollection.set(document.uri, [diagnostic]);
+}
+
+function clearDiagnostic(document: vscode.TextDocument) {
+	diagnosticCollection.delete(document.uri);
 }
 
 export async function getFormattedTextFromTreefmt(
@@ -216,6 +220,7 @@ export async function getFormattedTextFromTreefmt(
 					reject(stderr);
 					return;
 				}
+				clearDiagnostic(editor.document);
 				resolve(stdout);
 			},
 		);
