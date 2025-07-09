@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import * as fs from "fs";
 import { homedir } from "os";
 import * as path from "path";
@@ -28,8 +28,12 @@ export async function initTreefmt(ctx: vscode.ExtensionContext) {
 	await readConfig(ctx);
 	log(`Using treefmt command: ${command}`);
 
-	log(`Running: ${command} --init in ${workspaceRoot}`);
-	exec(`${command} --init`, { cwd: workspaceRoot }, (error) => {
+	const args: string[] = [];
+
+	args.push("--init");
+
+	log(`Running: ${[command, ...args].join(" ")} in ${workspaceRoot}`);
+	execFile(command, args, { cwd: workspaceRoot }, (error) => {
 		if (error) {
 			log(`Error running ${command} --init: ${error.message}`);
 			vscode.window.showErrorMessage(`Error running ${command} --init`);
@@ -57,15 +61,16 @@ export async function runTreefmtOnFile(
 
 	await readConfig(ctx);
 
+	const args: string[] = [];
+
 	if (configPath && !path.isAbsolute(configPath)) {
 		configPath = path.join(workspaceRoot, path.normalize(configPath));
 	}
 
-	let args = "";
 	if (configPath) {
-		args = ` --config-file=${configPath}`;
+		args.push("--config-file", configPath);
 	}
-	args += ` --working-dir=${workspaceRoot}`;
+	args.push("--working-dir", workspaceRoot);
 
 	// For legacy mode, we need to ensure the file is saved first
 	if (editor.document.isDirty) {
@@ -82,12 +87,13 @@ export async function runTreefmtOnFile(
 
 	const fileName = editor.document.fileName;
 	log(`Formatting file: ${fileName}`);
-	const fullCommand = `${command} ${args} ${fileName}`;
-	log(`Running command: ${fullCommand}`);
+	args.push(fileName);
+
+	log(`Running command: ${[command, ...args].join(" ")}`);
 
 	// Execute treefmt but don't try to replace any text in the editor
 	// This is for legacy mode only - treefmt will modify the file on disk
-	exec(fullCommand, { cwd: workspaceRoot }, (error, stdout, stderr) => {
+	execFile(command, args, { cwd: workspaceRoot }, (error, stdout, stderr) => {
 		if (error) {
 			const isSyntaxError = /error|invalid|parse|syntax/i.test(stderr);
 			if (isSyntaxError) {
@@ -110,7 +116,7 @@ export async function runTreefmtOnFile(
 			return;
 		}
 
-		log(`Command completed successfully: ${fullCommand}`);
+		log(`Command completed successfully: ${[command, ...args].join(" ")}`);
 
 		// Show a notification that formatting succeeded
 		vscode.window.setStatusBarMessage("Treefmt formatting complete", 3000);
@@ -182,23 +188,26 @@ export async function getFormattedTextFromTreefmt(
 	}
 
 	await readConfig(ctx);
-	let args = `--working-dir=${workspaceRoot}`;
+
+	const args: string[] = [];
+
+	args.push("--working-dir", workspaceRoot);
 	if (configPath) {
 		if (!path.isAbsolute(configPath)) {
 			configPath = path.join(workspaceRoot, path.normalize(configPath));
 		}
-		args += ` --config-file=${configPath}`;
+		args.push("--config-file", configPath);
 	}
 
 	const fileExtension = path.extname(editor.document.fileName);
-	args += ` --stdin ${fileExtension}`;
+	args.push("--stdin", fileExtension);
 
-	const fullCommand = `${command} ${args}`;
-	log(`Running stdin command: ${fullCommand}`);
+	log(`Running stdin command: ${[command, ...args].join(" ")}`);
 
 	return new Promise((resolve, reject) => {
-		const childProcess = exec(
-			fullCommand,
+		const childProcess = execFile(
+			command,
+			args,
 			{ cwd: workspaceRoot },
 			(error, stdout, stderr) => {
 				if (error) {
