@@ -12,7 +12,7 @@ jobs:
       uses: DeterminateSystems/nix-installer-action@main
     - uses: DeterminateSystems/magic-nix-cache-action@main
     - name: Install formatting tools
-      run: nix-env -f "<nixpkgs>" -iA nixpkgs-fmt treefmt2 biome yamlfmt mdformat taplo typos
+      run: nix profile install --inputs-from . nixpkgs#{nixpkgs-fmt,treefmt2,biome,yamlfmt,mdformat,taplo,typos}
     - name: Run treefmt
       uses: isbecker/treefmt-action@v1
       with:
