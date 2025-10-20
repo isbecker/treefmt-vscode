@@ -190,8 +190,7 @@ export async function getFormattedTextFromTreefmt(
 		args += ` --config-file=${configPath}`;
 	}
 
-	const fileExtension = path.extname(editor.document.fileName);
-	args += ` --stdin ${fileExtension}`;
+	args += ` --stdin "${editor.document.fileName}"`;
 
 	const fullCommand = `${command} ${args}`;
 	log(`Running stdin command: ${fullCommand}`);
