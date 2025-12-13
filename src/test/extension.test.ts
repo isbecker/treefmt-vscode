@@ -70,6 +70,7 @@ suite("Extension Test Suite", () => {
 			get: () => Promise.resolve(undefined),
 			delete: () => Promise.resolve(),
 			onDidChange: () => ({ dispose: () => {} }),
+			keys: () => Promise.resolve([]),
 		},
 		extensionUri: vscode.Uri.file(workspaceRoot),
 		extensionPath: workspaceRoot,
