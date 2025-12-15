@@ -58,31 +58,35 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ matrix.platform }}" == 'windows' ]]; then
-          echo "PRERELEASE=false" >> $GITHUB_ENV
           case "${{ matrix.arch }}" in
             "amd64") FILENAME="treefmt-x86_64-pc-windows-msvc.zip";;
             "arm64") FILENAME="treefmt-aarch64-pc-windows-msvc.zip";;
             *) echo "Unsupported platform/arch combination" && exit 1;;
           esac
+          TREEFMT_VERSION="v0.6.1"
+          LATEST="false"
         else
-          echo "PRERELEASE=true" >> $GITHUB_ENV
           case "${{ matrix.platform }}-${{ matrix.arch }}" in
-            "linux-amd64") FILENAME="treefmt_2.0.0-rc*_linux_amd64.tar.gz";;
-            "linux-arm64") FILENAME="treefmt_2.0.0-rc*_linux_arm64.tar.gz";;
-            "darwin-amd64") FILENAME="treefmt_2.0.0-rc*_darwin_amd64.tar.gz";;
-            "darwin-arm64") FILENAME="treefmt_2.0.0-rc*_darwin_arm64.tar.gz";;
+            "linux-amd64") FILENAME="treefmt_*_linux_amd64.tar.gz";;
+            "linux-arm64") FILENAME="treefmt_*_linux_arm64.tar.gz";;
+            "darwin-amd64") FILENAME="treefmt_*_darwin_amd64.tar.gz";;
+            "darwin-arm64") FILENAME="treefmt_*_darwin_arm64.tar.gz";;
             *) echo "Unsupported platform/arch combination" && exit 1;;
           esac
+          TREEFMT_VERSION=""
+          LATEST="true"
         fi
         echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+        echo "TREEFMT_VERSION=$TREEFMT_VERSION" >> $GITHUB_ENV
+        echo "LATEST=$LATEST" >> $GITHUB_ENV
 
     - name: Download treefmt
       id: download-release
       uses: robinraju/release-downloader@v1.10
       with:
         repository: "numtide/treefmt"
-        latest: true
-        preRelease: ${{ env.PRERELEASE }}
+        latest: ${{ env.LATEST }}
+        tag: ${{ env.TREEFMT_VERSION }}
         fileName: ${{ env.FILENAME }}
         out-file-path: "downloads"
         extract: true
