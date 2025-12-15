@@ -5,18 +5,21 @@ on: [push, pull_request]
 jobs:
   format:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@main
-    - uses: DeterminateSystems/magic-nix-cache-action@main
-    - name: Install formatting tools
-      run: nix-env -f "<nixpkgs>" -iA nixpkgs-fmt treefmt2 biome yamlfmt mdformat taplo typos
-    - name: Run treefmt
-      uses: isbecker/treefmt-action@v1
+    - uses: actions/checkout@v6
+    - uses: DeterminateSystems/nix-installer-action@v21
+    - uses: DeterminateSystems/magic-nix-cache-action@v13
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        version: 'latest'
+        use-flakehub: false
+        use-gha-cache: true
+    - name: Load devShell env into job
+      shell: bash
+      run: |
+        eval "$(nix print-dev-env --no-pure-eval --accept-flake-config .#ci)"
+        echo "PATH=$PATH" >> "$GITHUB_ENV"
+    - name: Run treefmt
+      uses: isbecker/treefmt-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        version: system
         ci: true
-        config_file: '.treefmt.toml'

@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import * as fs from "fs";
 import { homedir } from "os";
 import * as path from "path";
@@ -7,6 +7,177 @@ import { log, outputChannel } from "./extension"; // Import the shared log funct
 
 let command: string;
 let configPath: string | null = null;
+
+function expandTilde(input: string): string {
+	if (input.startsWith("~/")) {
+		return path.join(homedir(), input.slice(2));
+	}
+	return input;
+}
+
+function isPathLike(value: string): boolean {
+	return (
+		value.startsWith(".") ||
+		value.includes("/") ||
+		(process.platform === "win32" && value.includes("\\")) ||
+		path.isAbsolute(value)
+	);
+}
+
+function getStdinSpecifier(document: vscode.TextDocument): string {
+	if (document.uri.scheme !== "untitled") {
+		const baseName = path.basename(document.fileName);
+		if (baseName) {
+			return baseName;
+		}
+	}
+
+	const inferredExtension = getExtensionForLanguage(document.languageId);
+	if (inferredExtension) {
+		return inferredExtension;
+	}
+
+	return document.languageId;
+}
+
+function getExtensionForLanguage(languageId: string): string | undefined {
+	const extensionTokens: string[] = [];
+	const filenameTokens: string[] = [];
+
+	for (const extension of vscode.extensions.all) {
+		const contributes = extension.packageJSON?.contributes;
+		const languages = contributes?.languages as
+			| Array<{
+					id: string;
+					extensions?: string[];
+					filenames?: string[];
+			  }>
+			| undefined;
+		if (!languages) {
+			continue;
+		}
+
+		for (const language of languages) {
+			if (language.id !== languageId) {
+				continue;
+			}
+			if (language.extensions?.length) {
+				for (const ext of language.extensions) {
+					if (ext) {
+						extensionTokens.push(ensureDotPrefix(ext));
+					}
+				}
+			}
+			if (language.filenames?.length) {
+				for (const name of language.filenames) {
+					if (name) {
+						filenameTokens.push(name);
+					}
+				}
+			}
+		}
+	}
+
+	const bareFilenames = filenameTokens.filter((name) =>
+		/^[^./\\]+$/.test(name),
+	);
+	if (bareFilenames.length) {
+		return bareFilenames[0];
+	}
+
+	const preferredExtension = pickPreferredExtension(extensionTokens);
+	if (preferredExtension) {
+		return preferredExtension;
+	}
+
+	return filenameTokens.length > 0 ? filenameTokens[0] : undefined;
+}
+
+function ensureDotPrefix(value: string): string {
+	if (!value) {
+		return value;
+	}
+	return value.startsWith(".") ? value : `.${value.replace(/^\./, "")}`;
+}
+
+function pickPreferredExtension(candidates: string[]): string | undefined {
+	if (!candidates.length) {
+		return undefined;
+	}
+
+	const simple = candidates.find((candidate) =>
+		/^\.[A-Za-z0-9]+$/.test(candidate),
+	);
+	if (simple) {
+		return simple;
+	}
+
+	const alphanumeric = candidates.find((candidate) =>
+		/^\.[A-Za-z0-9][A-Za-z0-9.+-]*$/.test(candidate),
+	);
+	if (alphanumeric) {
+		return alphanumeric;
+	}
+
+	return candidates[0];
+}
+
+function resolveConfiguredCommand(
+	commandSetting: string,
+	workspaceRoot?: string,
+): string {
+	const expanded = expandTilde(commandSetting);
+	if (path.isAbsolute(expanded)) {
+		return expanded;
+	}
+	if (isPathLike(expanded)) {
+		return path.resolve(workspaceRoot ?? process.cwd(), expanded);
+	}
+	return expanded;
+}
+
+async function commandIsExecutable(
+	commandPath: string,
+	workspaceRoot?: string,
+): Promise<boolean> {
+	return new Promise((resolve) => {
+		let settled = false;
+		const finish = (result: boolean) => {
+			if (!settled) {
+				settled = true;
+				cleanup();
+				resolve(result);
+			}
+		};
+		const cleanup = () => {
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+			}
+		};
+		const child = execFile(
+			commandPath,
+			["--version"],
+			{ cwd: workspaceRoot ?? process.cwd() },
+			(error) => {
+				finish(!error);
+			},
+		);
+		const timeoutHandle = setTimeout(() => {
+			if (!settled) {
+				if (child && !child.killed) {
+					child.kill();
+				}
+				finish(false);
+			}
+		}, 5000);
+		child.on("error", () => {
+			if (child && !child.killed) {
+				child.kill();
+			}
+			finish(false);
+		});
+	});
+}
 
 async function getWorkspaceRoot() {
 	const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -29,7 +200,7 @@ export async function initTreefmt(ctx: vscode.ExtensionContext) {
 	log(`Using treefmt command: ${command}`);
 
 	log(`Running: ${command} --init in ${workspaceRoot}`);
-	exec(`${command} --init`, { cwd: workspaceRoot }, (error) => {
+	execFile(command, ["--init"], { cwd: workspaceRoot }, (error) => {
 		if (error) {
 			log(`Error running ${command} --init: ${error.message}`);
 			vscode.window.showErrorMessage(`Error running ${command} --init`);
@@ -61,11 +232,11 @@ export async function runTreefmtOnFile(
 		configPath = path.join(workspaceRoot, path.normalize(configPath));
 	}
 
-	let args = "";
+	const args: string[] = [];
 	if (configPath) {
-		args = ` --config-file=${configPath}`;
+		args.push(`--config-file=${configPath}`);
 	}
-	args += ` --working-dir=${workspaceRoot}`;
+	args.push(`--working-dir=${workspaceRoot}`);
 
 	// For legacy mode, we need to ensure the file is saved first
 	if (editor.document.isDirty) {
@@ -82,49 +253,76 @@ export async function runTreefmtOnFile(
 
 	const fileName = editor.document.fileName;
 	log(`Formatting file: ${fileName}`);
-	const fullCommand = `${command} ${args} ${fileName}`;
-	log(`Running command: ${fullCommand}`);
+	const fullArgs = [...args, fileName];
+	log(`Running command: ${command} ${fullArgs.join(" ")}`);
 
-	// Execute treefmt but don't try to replace any text in the editor
-	// This is for legacy mode only - treefmt will modify the file on disk
-	exec(fullCommand, { cwd: workspaceRoot }, (error, stdout, stderr) => {
-		if (error) {
-			const isSyntaxError = /error|invalid|parse|syntax/i.test(stderr);
-			if (isSyntaxError) {
-				outputChannel.appendLine(`[treefmt] Formatter error: ${stderr}`);
-				showDiagnostic(editor.document, stderr.split("\n")[0]);
+	// Execute treefmt without a shell; legacy mode still modifies file on disk
+	execFile(
+		command,
+		fullArgs,
+		{ cwd: workspaceRoot },
+		(error, stdout, stderr) => {
+			if (error) {
+				const isSyntaxError = /error|invalid|parse|syntax/i.test(stderr);
+				if (isSyntaxError) {
+					outputChannel.appendLine(`[treefmt] Formatter error: ${stderr}`);
+					showDiagnostic(editor.document, stderr.split("\n")[0]);
+					return;
+				}
+				log(`Error running ${command}: ${stderr}`);
+				vscode.window
+					.showErrorMessage(
+						`Error running ${command}: ${stderr}`,
+						"OK",
+						"Create treefmt.toml",
+					)
+					.then((selection) => {
+						if (selection === "Create treefmt.toml") {
+							initTreefmt(ctx);
+						}
+					});
 				return;
 			}
-			log(`Error running ${command}: ${stderr}`);
-			vscode.window
-				.showErrorMessage(
-					`Error running ${command}: ${stderr}`,
-					"OK",
-					"Create treefmt.toml",
-				)
-				.then((selection) => {
-					if (selection === "Create treefmt.toml") {
-						initTreefmt(ctx);
-					}
-				});
-			return;
-		}
 
-		log(`Command completed successfully: ${fullCommand}`);
-
-		// Show a notification that formatting succeeded
-		vscode.window.setStatusBarMessage("Treefmt formatting complete", 3000);
-	});
+			log(`Command completed successfully: ${command} ${fullArgs.join(" ")}`);
+			vscode.window.setStatusBarMessage("treefmt formatting complete", 3000);
+		},
+	);
 }
 
 export async function readConfig(ctx: vscode.ExtensionContext) {
 	const workspaceRoot = await getWorkspaceRoot();
 	const config = vscode.workspace.getConfiguration("treefmt");
 	const treefmtCommand: string | null = config.get("command") as string | null;
+	let resolvedCommand: string | null = null;
+
 	if (treefmtCommand) {
-		command = treefmtCommand;
-		log(`Using user-specified treefmt command: ${command}`);
-	} else {
+		const candidate = resolveConfiguredCommand(
+			treefmtCommand,
+			workspaceRoot ?? undefined,
+		);
+		if (await commandIsExecutable(candidate, workspaceRoot ?? undefined)) {
+			command = candidate;
+			resolvedCommand = candidate;
+			log(`Using user-specified treefmt command: ${command}`);
+		} else {
+			log(
+				`Configured treefmt command not found or not executable: ${candidate}`,
+			);
+		}
+	}
+
+	if (!resolvedCommand) {
+		const ext = process.platform === "win32" ? ".exe" : "";
+		const commandName = `treefmt${ext}`;
+		if (await commandIsExecutable(commandName, workspaceRoot ?? undefined)) {
+			command = commandName;
+			resolvedCommand = commandName;
+			log(`Using treefmt command from PATH: ${command}`);
+		}
+	}
+
+	if (!resolvedCommand) {
 		const ext = process.platform === "win32" ? ".exe" : "";
 		command = vscode.Uri.joinPath(
 			ctx.extensionUri,
@@ -133,25 +331,11 @@ export async function readConfig(ctx: vscode.ExtensionContext) {
 		).fsPath;
 		log(`Using bundled treefmt command: ${command}`);
 	}
-	if (command.startsWith("~/")) {
-		command = path.join(homedir(), command.slice("~".length));
-	}
 
 	const treefmtTomlPath = config.get<string | null>("config");
 	if (treefmtTomlPath) {
 		configPath = treefmtTomlPath;
 		log(`Using user-specified config path: ${configPath}`);
-	} else {
-		const possibleConfigs = ["treefmt.toml", ".treefmt.toml"];
-		configPath = null;
-		for (const configFileName of possibleConfigs) {
-			const possiblePath = path.join(workspaceRoot ?? "", configFileName);
-			if (fs.existsSync(possiblePath)) {
-				configPath = possiblePath;
-				log(`Found config file: ${configPath}`);
-				break;
-			}
-		}
 	}
 }
 
@@ -182,35 +366,34 @@ export async function getFormattedTextFromTreefmt(
 	}
 
 	await readConfig(ctx);
-	let args = `--working-dir=${workspaceRoot}`;
+	const args: string[] = [`--working-dir=${workspaceRoot}`];
 	if (configPath) {
 		if (!path.isAbsolute(configPath)) {
 			configPath = path.join(workspaceRoot, path.normalize(configPath));
 		}
-		args += ` --config-file=${configPath}`;
+		args.push(`--config-file=${configPath}`);
 	}
 
-	const fileExtension = path.extname(editor.document.fileName);
-	args += ` --stdin ${fileExtension}`;
+	const stdinSpecifier = getStdinSpecifier(editor.document);
+	log(`Using stdin token: ${stdinSpecifier}`);
+	args.push("--stdin", stdinSpecifier);
 
-	const fullCommand = `${command} ${args}`;
-	log(`Running stdin command: ${fullCommand}`);
+	log(`Running stdin command: ${command} ${args.join(" ")}`);
 
 	return new Promise((resolve, reject) => {
-		const childProcess = exec(
-			fullCommand,
+		const childProcess = execFile(
+			command,
+			args,
 			{ cwd: workspaceRoot },
 			(error, stdout, stderr) => {
 				if (error) {
-					// If treefmt returns a known formatting error, show it in output channel and as a diagnostic
 					const isSyntaxError = /error|invalid|parse|syntax/i.test(stderr);
 					if (isSyntaxError) {
 						outputChannel.appendLine(`[treefmt] Formatter error: ${stderr}`);
 						showDiagnostic(editor.document, stderr.split("\n")[0]);
-						resolve(text); // Return original text
+						resolve(text);
 						return;
 					}
-					// Unexpected error: show popup
 					log(`Error running stdin command: ${stderr}`);
 					vscode.window.showErrorMessage(`Error running ${command}: ${stderr}`);
 					reject(stderr);
@@ -251,4 +434,6 @@ export async function runTreefmtWithStdin(ctx: vscode.ExtensionContext) {
 	edit.replace(editor.document.uri, fullRange, formattedText);
 
 	await vscode.workspace.applyEdit(edit);
+
+	vscode.window.setStatusBarMessage("treefmt formatting complete", 3000);
 }
