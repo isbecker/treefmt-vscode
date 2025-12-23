@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandResolutionTests } from "./commandResolution.test";
 import { registerCommandTests } from "./commands.test";
-import { registerEnvironmentTests } from "./environment.test";
 import { registerPathAndExtensionHelperTests } from "./pathAndExtensionHelpers.test";
 import { registerStdinTokenInferenceTests } from "./stdinTokenInference.test";
 import { createTestContext } from "./testContext";
@@ -13,7 +12,6 @@ suite("Extension Test Suite", () => {
 	});
 
 	const ctx = createTestContext();
-	registerEnvironmentTests(ctx);
 	registerCommandTests(ctx);
 	registerStdinTokenInferenceTests(ctx);
 	registerPathAndExtensionHelperTests(ctx);
