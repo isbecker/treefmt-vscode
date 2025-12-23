@@ -40,41 +40,68 @@ function getStdinSpecifier(document: vscode.TextDocument): string {
 	return document.languageId;
 }
 
-function getExtensionForLanguage(languageId: string): string | undefined {
+type LanguageContribution = {
+	id: string;
+	extensions?: string[];
+	filenames?: string[];
+};
+
+function deriveExtensionFromFilename(filename: string): string | undefined {
+	// Match e.g. "pyproject.toml" -> ".toml".
+	// Avoid paths; only handle a single filename token.
+	const match = /^[^/\\]+\.([A-Za-z0-9][A-Za-z0-9.+-]*)$/.exec(filename);
+	if (!match) {
+		return undefined;
+	}
+	return ensureDotPrefix(match[1]);
+}
+
+function inferTokenForLanguage(
+	languageId: string,
+	contributions: LanguageContribution[],
+): string | undefined {
 	const extensionTokens: string[] = [];
 	const filenameTokens: string[] = [];
 
-	for (const extension of vscode.extensions.all) {
-		const contributes = extension.packageJSON?.contributes;
-		const languages = contributes?.languages as
-			| Array<{
-					id: string;
-					extensions?: string[];
-					filenames?: string[];
-			  }>
-			| undefined;
-		if (!languages) {
+	for (const language of contributions) {
+		if (language.id !== languageId) {
 			continue;
 		}
+		if (language.extensions?.length) {
+			for (const ext of language.extensions) {
+				if (ext) {
+					const normalized = ensureDotPrefix(ext);
+					if (normalized && !extensionTokens.includes(normalized)) {
+						extensionTokens.push(normalized);
+					}
+				}
+			}
+		}
+		if (language.filenames?.length) {
+			for (const name of language.filenames) {
+				if (name) {
+					filenameTokens.push(name);
+					const derived = deriveExtensionFromFilename(name);
+					if (derived && !extensionTokens.includes(derived)) {
+						extensionTokens.push(derived);
+					}
+				}
+			}
+		}
+	}
 
-		for (const language of languages) {
-			if (language.id !== languageId) {
-				continue;
-			}
-			if (language.extensions?.length) {
-				for (const ext of language.extensions) {
-					if (ext) {
-						extensionTokens.push(ensureDotPrefix(ext));
-					}
-				}
-			}
-			if (language.filenames?.length) {
-				for (const name of language.filenames) {
-					if (name) {
-						filenameTokens.push(name);
-					}
-				}
-			}
+	// Prefer an actual extension whenever possible (this avoids weird bare tokens like
+	// "pyproject toml" being chosen for TOML stdin).
+	if (extensionTokens.length) {
+		const exact = extensionTokens.find(
+			(candidate) => candidate.toLowerCase() === `.${languageId}`.toLowerCase(),
+		);
+		if (exact) {
+			return exact;
+		}
+		const preferredExtension = pickPreferredExtension(extensionTokens);
+		if (preferredExtension) {
+			return preferredExtension;
 		}
 	}
 
@@ -85,12 +112,24 @@ function getExtensionForLanguage(languageId: string): string | undefined {
 		return bareFilenames[0];
 	}
 
-	const preferredExtension = pickPreferredExtension(extensionTokens);
-	if (preferredExtension) {
-		return preferredExtension;
+	return filenameTokens.length > 0 ? filenameTokens[0] : undefined;
+}
+
+function getExtensionForLanguage(languageId: string): string | undefined {
+	const contributions: LanguageContribution[] = [];
+
+	for (const extension of vscode.extensions.all) {
+		const contributes = extension.packageJSON?.contributes;
+		const languages = contributes?.languages as
+			| LanguageContribution[]
+			| undefined;
+		if (!languages) {
+			continue;
+		}
+		contributions.push(...languages);
 	}
 
-	return filenameTokens.length > 0 ? filenameTokens[0] : undefined;
+	return inferTokenForLanguage(languageId, contributions);
 }
 
 function ensureDotPrefix(value: string): string {
@@ -293,18 +332,35 @@ export async function runTreefmtOnFile(
 export async function readConfig(ctx: vscode.ExtensionContext) {
 	const workspaceRoot = await getWorkspaceRoot();
 	const config = vscode.workspace.getConfiguration("treefmt");
-	const treefmtCommand: string | null = config.get("command") as string | null;
-	let resolvedCommand: string | null = null;
+	const treefmtCommand =
+		(config.get<string | null>("command") as string | null | undefined) ?? null;
+	const treefmtTomlPath = config.get<string | null>("config") ?? null;
 
-	if (treefmtCommand) {
-		const candidate = resolveConfiguredCommand(
-			treefmtCommand,
-			workspaceRoot ?? undefined,
-		);
-		if (await commandIsExecutable(candidate, workspaceRoot ?? undefined)) {
-			command = candidate;
+	const resolved = await resolveTreefmtConfig(ctx, workspaceRoot ?? undefined, {
+		commandSetting: treefmtCommand,
+		configSetting: treefmtTomlPath,
+	});
+	command = resolved.command;
+	configPath = resolved.configPath;
+}
+
+async function resolveTreefmtConfig(
+	ctx: vscode.ExtensionContext,
+	workspaceRoot: string | undefined,
+	settings: {
+		commandSetting: string | null;
+		configSetting: string | null;
+	},
+): Promise<{ command: string; configPath: string | null }> {
+	const { commandSetting, configSetting } = settings;
+	let resolvedCommand: string | null = null;
+	let resolvedConfigPath: string | null = null;
+
+	if (commandSetting) {
+		const candidate = resolveConfiguredCommand(commandSetting, workspaceRoot);
+		if (await commandIsExecutable(candidate, workspaceRoot)) {
 			resolvedCommand = candidate;
-			log(`Using user-specified treefmt command: ${command}`);
+			log(`Using user-specified treefmt command: ${candidate}`);
 		} else {
 			log(
 				`Configured treefmt command not found or not executable: ${candidate}`,
@@ -315,28 +371,28 @@ export async function readConfig(ctx: vscode.ExtensionContext) {
 	if (!resolvedCommand) {
 		const ext = process.platform === "win32" ? ".exe" : "";
 		const commandName = `treefmt${ext}`;
-		if (await commandIsExecutable(commandName, workspaceRoot ?? undefined)) {
-			command = commandName;
+		if (await commandIsExecutable(commandName, workspaceRoot)) {
 			resolvedCommand = commandName;
-			log(`Using treefmt command from PATH: ${command}`);
+			log(`Using treefmt command from PATH: ${commandName}`);
 		}
 	}
 
 	if (!resolvedCommand) {
 		const ext = process.platform === "win32" ? ".exe" : "";
-		command = vscode.Uri.joinPath(
+		resolvedCommand = vscode.Uri.joinPath(
 			ctx.extensionUri,
 			"bin",
 			`treefmt${ext}`,
 		).fsPath;
-		log(`Using bundled treefmt command: ${command}`);
+		log(`Using bundled treefmt command: ${resolvedCommand}`);
 	}
 
-	const treefmtTomlPath = config.get<string | null>("config");
-	if (treefmtTomlPath) {
-		configPath = treefmtTomlPath;
-		log(`Using user-specified config path: ${configPath}`);
+	if (configSetting) {
+		resolvedConfigPath = configSetting;
+		log(`Using user-specified config path: ${resolvedConfigPath}`);
 	}
+
+	return { command: resolvedCommand, configPath: resolvedConfigPath };
 }
 
 function showDiagnostic(document: vscode.TextDocument, message: string) {
@@ -437,3 +493,25 @@ export async function runTreefmtWithStdin(ctx: vscode.ExtensionContext) {
 
 	vscode.window.setStatusBarMessage("treefmt formatting complete", 3000);
 }
+
+// ------------------------------
+// Test-only exports
+// ------------------------------
+// A single namespace keeps the extension surface area tidy.
+
+export const __test__ = {
+	expandTilde,
+	isPathLike,
+	getStdinSpecifier,
+	getConfigState: (): { command: string; configPath: string | null } => ({
+		command,
+		configPath,
+	}),
+	ensureDotPrefix,
+	pickPreferredExtension,
+	resolveConfiguredCommand,
+	commandIsExecutable,
+	deriveExtensionFromFilename,
+	inferTokenForLanguage,
+	resolveTreefmtConfig,
+} as const;
